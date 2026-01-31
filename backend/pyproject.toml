@@ -6,7 +6,7 @@ authors = ["Antony Evmorfopoulos <antonhs.evm@outlook.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "3.13.7"
+python = "^3.13"
 alembic = "1.17.2"
 uvicorn = "0.37.0"
 gunicorn = "23.0.0"

@@ -1,4 +1,4 @@
-"""Session repository for database operations."""
+"""Session repository for database operations related to sessions."""
 
 from collections.abc import Sequence
 

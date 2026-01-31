@@ -37,19 +37,28 @@ jobs:
 
       - name: Check for frontend changes
         id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "should-deploy=true" >> $GITHUB_OUTPUT
             echo "Manual deployment triggered"
           else
-            # Check if frontend files changed in the last commit
-            CHANGED=$(git diff --name-only HEAD~1 HEAD -- frontend/ | wc -l)
-            if [[ "$CHANGED" -gt 0 ]]; then
+            # Check if the CI workflow's frontend-build job completed successfully
+            # This means frontend changes were detected and built successfully
+            RUN_ID="${{ github.event.workflow_run.id }}"
+
+            # Get jobs from the triggering workflow run
+            FRONTEND_BUILD_RESULT=$(gh api \
+              "/repos/${{ github.repository }}/actions/runs/${RUN_ID}/jobs" \
+              --jq '.jobs[] | select(.name == "Frontend - Build") | .conclusion' 2>/dev/null || echo "")
+
+            if [[ "$FRONTEND_BUILD_RESULT" == "success" ]]; then
               echo "should-deploy=true" >> $GITHUB_OUTPUT
-              echo "Frontend changes detected"
+              echo "Frontend build succeeded in CI - deploying"
             else
               echo "should-deploy=false" >> $GITHUB_OUTPUT
-              echo "No frontend changes"
+              echo "No frontend build in CI (conclusion: $FRONTEND_BUILD_RESULT)"
             fi
           fi
 

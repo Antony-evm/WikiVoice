@@ -35,6 +35,9 @@ class QueryRepository:
         Returns:
             The created query model.
         """
+        logger.info(
+            f"[QueryRepo] Creating query - session_id={session_id}, query_text={query_text[:50]}..."
+        )
         query = QueryModel(
             session_id=session_id,
             query_text=query_text,
@@ -44,6 +47,7 @@ class QueryRepository:
         self.db.add(query)
         await self.db.flush()
         await self.db.refresh(query)
+        logger.info(f"[QueryRepo] Query created and flushed - query_id={query.query_id}")
         return query
 
     async def get_queries_by_session_id(

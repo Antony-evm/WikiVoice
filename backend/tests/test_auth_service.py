@@ -164,10 +164,10 @@ class TestAuthServiceRegistration:
     @pytest.mark.parametrize(
         "email,password",
         [
-            ("user@example.com", "Password123"),
-            ("admin@company.org", "SecurePass1"),
-            ("test.user@domain.co.uk", "MyPassword1"),
-            ("user+tag@gmail.com", "TestPass99"),
+            ("user@example.com", "Password123!"),
+            ("admin@company.org", "SecurePass1!"),
+            ("test.user@domain.co.uk", "MyPassword1@"),
+            ("user+tag@gmail.com", "TestPass99!"),
         ],
     )
     async def test_register_user_creates_user_and_returns_auth_result(
@@ -218,7 +218,7 @@ class TestAuthServiceRegistration:
         # Arrange
         mock_stytch_client.create_password_user.side_effect = Exception("Stytch API error")
 
-        request = RegisterUserRequest(email="test@example.com", password="Password123")
+        request = RegisterUserRequest(email="test@example.com", password="Password123!")
 
         # Act & Assert
         with pytest.raises(Exception, match="Stytch API error"):
@@ -247,9 +247,9 @@ class TestAuthServiceLogin:
     @pytest.mark.parametrize(
         "email,password,stytch_user_id",
         [
-            ("user@example.com", "Password123", "stytch-user-1"),
-            ("admin@company.org", "SecurePass1", "stytch-user-2"),
-            ("manager@test.com", "Manager99", "stytch-user-3"),
+            ("user@example.com", "Password123!", "stytch-user-1"),
+            ("admin@company.org", "SecurePass1#", "stytch-user-2"),
+            ("manager@test.com", "Manager99$", "stytch-user-3"),
         ],
     )
     async def test_login_authenticates_and_returns_user(

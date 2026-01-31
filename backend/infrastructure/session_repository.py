@@ -27,10 +27,12 @@ class SessionRepository:
         Returns:
             The created session model.
         """
+        logger.info(f"[SessionRepo] Creating session - user_id={user_id}, title={title}")
         session = SessionModel(user_id=user_id, title=title)
         self.db.add(session)
         await self.db.flush()
         await self.db.refresh(session)
+        logger.info(f"[SessionRepo] Session created and flushed - session_id={session.session_id}")
         return session
 
     async def get_session_by_id(self, session_id: int) -> SessionModel | None:

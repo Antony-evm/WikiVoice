@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useChatStore } from "./chat";
 
 export const useAuthStore = defineStore("auth", () => {
   const router = useRouter();
@@ -20,6 +21,12 @@ export const useAuthStore = defineStore("auth", () => {
 
   // Actions
   function setUser(id: number, userEmail: string) {
+    // If switching users, clear chat state to prevent data leakage
+    if (userId.value !== null && userId.value !== id) {
+      const chatStore = useChatStore();
+      chatStore.clearAllState();
+    }
+
     userId.value = id;
     email.value = userEmail;
     isLoggedIn.value = true;
@@ -29,6 +36,10 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function logout() {
+    // Clear chat state FIRST to prevent data leakage to next user
+    const chatStore = useChatStore();
+    chatStore.clearAllState();
+
     // Call backend to clear HTTP-only cookies
     try {
       const api = (await import("@/api/client")).default;

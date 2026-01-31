@@ -1,5 +1,7 @@
 """Session router for session management endpoints."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +19,8 @@ from domain.responses.session_list_response import SessionListResponse
 from domain.responses.session_response import SessionResponse
 from infrastructure.query_repository import QueryRepository
 from infrastructure.session_repository import SessionRepository
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions")
 
@@ -55,7 +59,9 @@ async def create_session(
     session_service: SessionService = Depends(get_session_service),
 ) -> SuccessResponse[SessionResponse]:
     """Create a new conversation session."""
+    logger.info(f"[SessionRouter] create_session called - user_id={user_id}, title={request.title}")
     session = await session_service.create_session(user_id, request.title)
+    logger.info(f"[SessionRouter] Session created - session_id={session.session_id}")
     return SuccessResponse(data=session, message="Session created successfully")
 
 
@@ -114,12 +120,14 @@ async def get_session(
     session_service: SessionService = Depends(get_session_service),
 ) -> SuccessResponse[SessionResponse]:
     """Get a specific session."""
+    logger.info(f"[SessionRouter] get_session called - session_id={session_id}, user_id={user_id}")
     session = await session_service.get_session(session_id, user_id)
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found",
         )
+
     return SuccessResponse(data=session, message="Session retrieved successfully")
 
 

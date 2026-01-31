@@ -16,9 +16,9 @@ class RegisterUserRequest(BaseModel):
     )
     password: str = Field(
         min_length=8,
-        max_length=128,
-        description="User's password (min 8 chars, 1 uppercase, 1 lowercase, 1 number)",
-        examples=["SecurePass123"],
+        max_length=32,
+        description="User's password (8-32 chars, 1 uppercase, 1 lowercase, 1 number, 1 symbol)",
+        examples=["SecurePass123!"],
     )
 
     @field_validator("password")
@@ -28,9 +28,11 @@ class RegisterUserRequest(BaseModel):
 
         Requirements:
         - Minimum 8 characters (handled by Field min_length)
+        - Maximum 32 characters (handled by Field max_length)
         - At least 1 uppercase letter
         - At least 1 lowercase letter
         - At least 1 number
+        - At least 1 symbol
         """
         if not re.search(r"[A-Z]", v):
             raise ValueError("Password must contain at least one uppercase letter")
@@ -38,6 +40,8 @@ class RegisterUserRequest(BaseModel):
             raise ValueError("Password must contain at least one lowercase letter")
         if not re.search(r"\d", v):
             raise ValueError("Password must contain at least one number")
+        if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?~`]", v):
+            raise ValueError("Password must contain at least one symbol")
         if len(v) < PASSWORD_MIN_LENGTH:
             raise ValueError("Password must be at least 8 characters long")
         return v
@@ -49,7 +53,7 @@ class RegisterUserRequest(BaseModel):
             "examples": [
                 {
                     "email": "john.doe@example.com",
-                    "password": "SecurePass123",
+                    "password": "SecurePass123!",
                 }
             ]
         },

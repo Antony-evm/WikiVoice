@@ -239,11 +239,10 @@ jobs:
   # DOCKER BUILD JOBS
   # ========================================
 
-  # Backend Docker Build & Push to ECR (on PRs)
+  # Backend Docker Build & Push to ECR
   docker-backend:
     name: Backend - Docker Build & Push to ECR
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     needs: [backend-lint, backend-security, backend-test]
     permissions:
       id-token: write
@@ -273,7 +272,12 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          SHORT_SHA="${{ github.event.pull_request.head.sha }}"
+          # Use PR head SHA for PRs, commit SHA for pushes
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            SHORT_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            SHORT_SHA="${GITHUB_SHA}"
+          fi
           SHORT_SHA="${SHORT_SHA::7}"
           IMAGE_URI="${ECR_REGISTRY}/${{ env.ECR_REPOSITORY }}"
 
@@ -292,7 +296,7 @@ jobs:
           cache-to: type=gha,mode=max
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}
+            org.opencontainers.image.revision=${{ github.sha }}
 
       - name: Output image details
         run: |

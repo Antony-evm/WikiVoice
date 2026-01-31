@@ -1,4 +1,5 @@
 from fastapi import Request
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.constants import AUTH_EXCLUDED_PATHS, AuthConstants
@@ -24,12 +25,25 @@ class StytchAuthMiddleware(BaseHTTPMiddleware):
         # Try to get token from cookie first, then fall back to header
         token = self._extract_token_from_cookie(request) or self._extract_bearer_token(request)
         if not token:
-            raise InvalidSessionTokenError(
+            exc = InvalidSessionTokenError(
                 error="Authorization missing",
                 message="Authorization cookie or header missing",
             )
+            return JSONResponse(
+                status_code=exc.status_code,
+                content=exc.to_dict(),
+                headers=exc.headers,
+            )
 
-        auth_response = authenticate_jwt(token)
+        try:
+            auth_response = authenticate_jwt(token)
+        except InvalidSessionTokenError as exc:
+            return JSONResponse(
+                status_code=exc.status_code,
+                content=exc.to_dict(),
+                headers=exc.headers,
+            )
+
         request.state.user_id = auth_response.stytch_user_id
         request.state.session_jwt = auth_response.session_jwt
         user_id_var.set(request.state.user_id)

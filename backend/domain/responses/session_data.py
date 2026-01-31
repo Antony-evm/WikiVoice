@@ -26,13 +26,17 @@ class SessionData(BaseModel):
         settings = get_settings()
         is_production = settings.environment == "production"
 
+        # For cross-origin requests (different CloudFront distributions),
+        # we need samesite="none" with secure=True
+        samesite_value = "none" if is_production else "lax"
+
         # Session JWT cookie - used for API authentication
         response.set_cookie(
             key="session_jwt",
             value=self.session_jwt,
             httponly=True,
             secure=is_production,
-            samesite="lax",
+            samesite=samesite_value,
             max_age=60 * 60 * 24 * 7,  # 7 days
             path="/",
         )
@@ -43,7 +47,7 @@ class SessionData(BaseModel):
             value=self.session_token,
             httponly=True,
             secure=is_production,
-            samesite="lax",
+            samesite=samesite_value,
             max_age=60 * 60 * 24 * 7,  # 7 days
             path="/",
         )
@@ -54,7 +58,7 @@ class SessionData(BaseModel):
             value=self.stytch_user_id,
             httponly=False,  # Frontend needs to read this
             secure=is_production,
-            samesite="lax",
+            samesite=samesite_value,
             max_age=60 * 60 * 24 * 7,  # 7 days
             path="/",
         )

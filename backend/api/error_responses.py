@@ -16,18 +16,6 @@ UNAUTHORIZED_401 = {
     },
 }
 
-FORBIDDEN_403 = {
-    "description": "Forbidden - Not authorized to access this resource",
-    "content": {
-        "application/json": {
-            "example": {
-                "error": "Unauthorized access to resource",
-                "message": "You do not have permission to access this resource.",
-            }
-        }
-    },
-}
-
 NOT_FOUND_404 = {
     "description": "Not Found - Resource does not exist",
     "content": {
@@ -35,30 +23,6 @@ NOT_FOUND_404 = {
             "example": {
                 "error": "Resource not found",
                 "message": "The requested resource does not exist",
-            }
-        }
-    },
-}
-
-USER_NOT_FOUND_404 = {
-    "description": "Not Found - User does not exist",
-    "content": {
-        "application/json": {
-            "example": {
-                "error": "User with id {id} not found",
-                "message": "User does not exist. Please create an account before logging in.",
-            }
-        }
-    },
-}
-
-CONFLICT_409 = {
-    "description": "Conflict - Resource already exists or constraint violation",
-    "content": {
-        "application/json": {
-            "example": {
-                "error": "Resource conflict",
-                "message": "A resource with these details already exists",
             }
         }
     },
@@ -124,18 +88,6 @@ INTERNAL_SERVER_ERROR_500 = {
             "example": {
                 "error": "Internal server error",
                 "message": "An unexpected error occurred. Please try again later.",
-            }
-        }
-    },
-}
-
-STYTCH_SERVICE_ERROR_503 = {
-    "description": "Service Unavailable - Authentication service error",
-    "content": {
-        "application/json": {
-            "example": {
-                "error": "Service unavailable",
-                "message": "Authentication service is temporarily unavailable",
             }
         }
     },

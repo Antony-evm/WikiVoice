@@ -29,42 +29,10 @@ env:
   CONTAINER_NAME: backend
 
 jobs:
-  # Check if backend changes were made
-  check-changes:
-    name: Check Backend Changes
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
-    outputs:
-      should-deploy: ${{ steps.check.outputs.should-deploy }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Check for backend changes
-        id: check
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "should-deploy=true" >> $GITHUB_OUTPUT
-            echo "Manual deployment triggered"
-          else
-            # Check if backend files changed in the last commit
-            CHANGED=$(git diff --name-only HEAD~1 HEAD -- backend/ | wc -l)
-            if [[ "$CHANGED" -gt 0 ]]; then
-              echo "should-deploy=true" >> $GITHUB_OUTPUT
-              echo "Backend changes detected"
-            else
-              echo "should-deploy=false" >> $GITHUB_OUTPUT
-              echo "No backend changes"
-            fi
-          fi
-
   deploy:
     name: Deploy to ECS
     runs-on: ubuntu-latest
-    needs: check-changes
-    if: needs.check-changes.outputs.should-deploy == 'true'
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     permissions:
       id-token: write
       contents: read

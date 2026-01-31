@@ -22,51 +22,10 @@ env:
   CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION }}
 
 jobs:
-  # Check if frontend changes were made
-  check-changes:
-    name: Check Frontend Changes
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
-    outputs:
-      should-deploy: ${{ steps.check.outputs.should-deploy }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Check for frontend changes
-        id: check
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "should-deploy=true" >> $GITHUB_OUTPUT
-            echo "Manual deployment triggered"
-          else
-            # Check if the CI workflow's frontend-build job completed successfully
-            # This means frontend changes were detected and built successfully
-            RUN_ID="${{ github.event.workflow_run.id }}"
-
-            # Get jobs from the triggering workflow run
-            FRONTEND_BUILD_RESULT=$(gh api \
-              "/repos/${{ github.repository }}/actions/runs/${RUN_ID}/jobs" \
-              --jq '.jobs[] | select(.name == "Frontend - Build") | .conclusion' 2>/dev/null || echo "")
-
-            if [[ "$FRONTEND_BUILD_RESULT" == "success" ]]; then
-              echo "should-deploy=true" >> $GITHUB_OUTPUT
-              echo "Frontend build succeeded in CI - deploying"
-            else
-              echo "should-deploy=false" >> $GITHUB_OUTPUT
-              echo "No frontend build in CI (conclusion: $FRONTEND_BUILD_RESULT)"
-            fi
-          fi
-
   deploy:
     name: Deploy to S3 & CloudFront
     runs-on: ubuntu-latest
-    needs: check-changes
-    if: needs.check-changes.outputs.should-deploy == 'true'
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     permissions:
       id-token: write
       contents: read
@@ -96,7 +55,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_FRONTEND_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Deploy to S3

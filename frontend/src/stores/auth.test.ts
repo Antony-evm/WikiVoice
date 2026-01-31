@@ -11,12 +11,18 @@ vi.mock("vue-router", () => ({
   }),
 }));
 
-// Mock api client
+// Mock api client - use function factory for hoisting
 vi.mock("@/api/client", () => ({
   default: {
     post: vi.fn(),
   },
 }));
+
+// Import mock after vi.mock
+import api from "@/api/client";
+
+// Cast api methods for mocking
+const mockedApi = vi.mocked(api, { deep: true });
 
 describe("Auth Store", () => {
   beforeEach(() => {
@@ -187,19 +193,17 @@ describe("Auth Store", () => {
     });
 
     it("should call backend logout endpoint", async () => {
-      const api = (await import("@/api/client")).default;
       const { useAuthStore } = await import("./auth");
       const store = useAuthStore();
       store.setUser(123, "user@example.com");
 
       await store.logout();
 
-      expect(api.post).toHaveBeenCalledWith("/auth/logout");
+      expect(mockedApi.post).toHaveBeenCalledWith("/auth/logout");
     });
 
     it("should handle backend logout errors gracefully", async () => {
-      const api = (await import("@/api/client")).default;
-      vi.mocked(api.post).mockRejectedValueOnce(new Error("Network error"));
+      mockedApi.post.mockRejectedValueOnce(new Error("Network error"));
 
       const { useAuthStore } = await import("./auth");
       const store = useAuthStore();

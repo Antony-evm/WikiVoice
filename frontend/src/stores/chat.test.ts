@@ -19,7 +19,7 @@ import api from "@/api/client";
 import { useChatStore } from "./chat";
 
 // Cast api methods for mocking
-const mockedApi = vi.mocked(api);
+const mockedApi = vi.mocked(api, { deep: true });
 
 describe("Chat Store", () => {
   beforeEach(() => {

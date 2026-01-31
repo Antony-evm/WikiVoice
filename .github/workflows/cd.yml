@@ -1,0 +1,198 @@
+name: CD Pipeline - Deploy Backend to ECS
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image-tag:
+        description: "Docker image tag to deploy (short SHA)"
+        required: true
+        type: string
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: wikivoice-prod-backend
+  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER_NAME }}
+  ECS_SERVICE: ${{ secrets.ECS_SERVICE_NAME }}
+  ECS_TASK_DEFINITION: ${{ secrets.ECS_TASK_DEFINITION_FAMILY }}
+  CONTAINER_NAME: backend
+
+jobs:
+  # Check if backend changes were made
+  check-changes:
+    name: Check Backend Changes
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    outputs:
+      should-deploy: ${{ steps.check.outputs.should-deploy }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for backend changes
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+            echo "Manual deployment triggered"
+          else
+            # Check if backend files changed in the last commit
+            CHANGED=$(git diff --name-only HEAD~1 HEAD -- backend/ | wc -l)
+            if [[ "$CHANGED" -gt 0 ]]; then
+              echo "should-deploy=true" >> $GITHUB_OUTPUT
+              echo "Backend changes detected"
+            else
+              echo "should-deploy=false" >> $GITHUB_OUTPUT
+              echo "No backend changes"
+            fi
+          fi
+
+  deploy:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.should-deploy == 'true'
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Determine image tag
+        id: image-tag
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            IMAGE_TAG="${{ github.event.inputs.image-tag }}"
+          else
+            IMAGE_TAG="${{ github.event.workflow_run.head_sha }}"
+            IMAGE_TAG="${IMAGE_TAG::7}"
+          fi
+
+          IMAGE_URI="${ECR_REGISTRY}/${{ env.ECR_REPOSITORY }}:${IMAGE_TAG}"
+
+          echo "tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
+
+          echo "📦 Deploying image: ${IMAGE_URI}"
+
+      - name: Verify image exists in ECR
+        run: |
+          aws ecr describe-images \
+            --repository-name ${{ env.ECR_REPOSITORY }} \
+            --image-ids imageTag=${{ steps.image-tag.outputs.tag }} \
+            || (echo "❌ Image not found in ECR" && exit 1)
+          echo "✅ Image verified in ECR"
+
+      - name: Download current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_TASK_DEFINITION }} \
+            --query 'taskDefinition' \
+            > task-definition.json
+
+          # Remove fields that shouldn't be in new registration
+          jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' \
+            task-definition.json > clean-task-definition.json
+          mv clean-task-definition.json task-definition.json
+
+      - name: Update task definition with new image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.image-tag.outputs.uri }}
+
+      - name: Deploy to Amazon ECS
+        id: deploy
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          wait-for-minutes: 10
+
+      - name: Deployment summary
+        run: |
+          echo "### Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Cluster:** \`${{ env.ECS_CLUSTER }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Service:** \`${{ env.ECS_SERVICE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** \`${{ steps.image-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Task Definition ARN:** \`${{ steps.deploy.outputs.task-definition-arn }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: [${{ github.event.workflow_run.head_sha || github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha || github.sha }})" >> $GITHUB_STEP_SUMMARY
+
+  # Rollback job - can be triggered manually
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && failure() }}
+    needs: [deploy]
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get previous task definition
+        id: previous
+        run: |
+          # Get the previous task definition revision
+          CURRENT=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --query 'services[0].taskDefinition' \
+            --output text)
+
+          REVISION=$(echo $CURRENT | grep -oP ':\K\d+$')
+          PREVIOUS_REVISION=$((REVISION - 1))
+          FAMILY=$(echo $CURRENT | sed 's/:[0-9]*$//')
+          PREVIOUS="${FAMILY}:${PREVIOUS_REVISION}"
+
+          echo "previous-task-def=${PREVIOUS}" >> $GITHUB_OUTPUT
+          echo "Rolling back to: ${PREVIOUS}"
+
+      - name: Rollback to previous task definition
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --task-definition ${{ steps.previous.outputs.previous-task-def }} \
+            --force-new-deployment
+
+          echo "⏪ Rollback initiated to ${{ steps.previous.outputs.previous-task-def }}"

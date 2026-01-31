@@ -1,0 +1,94 @@
+[tool.poetry]
+name = "wikivoice-app-backend"
+version = "0.1.0"
+description = ""
+authors = ["Antony Evmorfopoulos <antonhs.evm@outlook.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.13.7"
+alembic = "1.17.2"
+uvicorn = "0.37.0"
+gunicorn = "23.0.0"
+fastapi = "0.117.1"
+pydantic = "2.12.5"
+dotenv = "0.9.9"
+async = "0.6.2"
+sqlalchemy = {extras = ["asyncio"], version = "2.0.44"}
+pydantic-settings = "2.12.0"
+stytch = "13.28.1"
+asyncpg = "0.30.0"
+orjson = "3.11.4"
+structlog = "24.4.0"
+email-validator = "2.3.0"
+aiohttp = "3.13.2"
+httpx = "^0.28.1"
+tzdata = "^2025.3"
+cachetools = "^5.5.0"
+types-cachetools = "^6.2.0.20251022"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "8.4.2"
+pytest-asyncio = "0.24.0"
+pytest-cov = "6.3.0"
+ruff = "0.8.6"
+pre-commit = "4.5.0"
+bandit = {extras = ["toml"], version = "1.7.10"}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+# Bandit security linter configuration
+[tool.bandit]
+exclude_dirs = [
+    "tests",
+    ".venv",
+    "__pycache__",
+    "alembic/versions",
+]
+skips = ["B101", "B104", "B105", "B601"]
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow running tests",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "*/tests/*",
+    "*/alembic/*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+    "*/conftest.py",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]

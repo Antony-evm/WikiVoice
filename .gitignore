@@ -1,0 +1,100 @@
+# ============================================
+# Environment & Secrets
+# ============================================
+.env
+.env.*
+.env.local
+.env.*.local
+*.env
+
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+ENV/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.cover
+coverage.xml
+*.log
+
+# ============================================
+# Node.js / Frontend
+# ============================================
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+.cache/
+*.tsbuildinfo
+
+# ============================================
+# IDE & Editor
+# ============================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Terraform
+# ============================================
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# ============================================
+# Docker
+# ============================================
+*.log
+docker-compose.override.yml
+
+# ============================================
+# Testing & Coverage
+# ============================================
+coverage/
+*.lcov
+
+# ============================================
+# Build outputs
+# ============================================
+*.pyc
+*.pyo
+*.pyd

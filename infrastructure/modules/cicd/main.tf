@@ -327,7 +327,12 @@ resource "aws_iam_role" "github_actions_frontend_deploy" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}/${var.github_repo}:*"
+            # Allow workflow_run triggers from main branch, workflow_dispatch, and environment-based deployments
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/main",
+              "repo:${var.github_org}/${var.github_repo}:environment:${var.github_environment}",
+              "repo:${var.github_org}/${var.github_repo}:environment:staging"
+            ]
           }
         }
       }

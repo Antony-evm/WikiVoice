@@ -74,7 +74,9 @@ describe("Chat Store", () => {
 
     it("should set isLoading to false after fetching", async () => {
       const store = useChatStore();
-      mockedApi.get.mockResolvedValueOnce({ data: { data: { sessions: [] } } } as any);
+      mockedApi.get.mockResolvedValueOnce({
+        data: { data: { sessions: [] } },
+      } as any);
 
       await store.fetchSessions();
 
@@ -108,7 +110,9 @@ describe("Chat Store", () => {
 
     it("should handle fetch errors gracefully", async () => {
       const store = useChatStore();
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       mockedApi.get.mockRejectedValueOnce(new Error("Network error"));
 
       await store.fetchSessions();
@@ -128,7 +132,9 @@ describe("Chat Store", () => {
         created_at: "2024-01-01",
         updated_at: "2024-01-01",
       };
-      mockedApi.post.mockResolvedValueOnce({ data: { data: mockSession } } as any);
+      mockedApi.post.mockResolvedValueOnce({
+        data: { data: mockSession },
+      } as any);
 
       const result = await store.createSession();
 
@@ -143,7 +149,9 @@ describe("Chat Store", () => {
         created_at: "2024-01-01",
         updated_at: "2024-01-01",
       };
-      mockedApi.post.mockResolvedValueOnce({ data: { data: mockSession } } as any);
+      mockedApi.post.mockResolvedValueOnce({
+        data: { data: mockSession },
+      } as any);
 
       await store.createSession();
 
@@ -172,7 +180,9 @@ describe("Chat Store", () => {
 
     it("should return null on error", async () => {
       const store = useChatStore();
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       mockedApi.post.mockRejectedValueOnce(new Error("Network error"));
 
       const result = await store.createSession();
@@ -228,7 +238,9 @@ describe("Chat Store", () => {
       ];
       mockedApi.get
         .mockResolvedValueOnce({ data: { data: {} } } as any)
-        .mockResolvedValueOnce({ data: { data: { queries: mockQueries } } } as any);
+        .mockResolvedValueOnce({
+          data: { data: { queries: mockQueries } },
+        } as any);
 
       await store.loadSession(1);
 
@@ -293,7 +305,9 @@ describe("Chat Store", () => {
         sources: [],
         created_at: "2024-01-01",
       };
-      mockedApi.post.mockResolvedValueOnce({ data: { data: mockQuery } } as any);
+      mockedApi.post.mockResolvedValueOnce({
+        data: { data: mockQuery },
+      } as any);
 
       await store.sendQuery("What is AI?");
 
@@ -309,7 +323,12 @@ describe("Chat Store", () => {
         updated_at: "",
       };
       store.sessions = [
-        { session_id: 1, title: "New Conversation", created_at: "", updated_at: "" },
+        {
+          session_id: 1,
+          title: "New Conversation",
+          created_at: "",
+          updated_at: "",
+        },
       ];
       store.queries = [];
       const mockQuery: Query = {
@@ -320,7 +339,9 @@ describe("Chat Store", () => {
         sources: [],
         created_at: "2024-01-01",
       };
-      mockedApi.post.mockResolvedValueOnce({ data: { data: mockQuery } } as any);
+      mockedApi.post.mockResolvedValueOnce({
+        data: { data: mockQuery },
+      } as any);
 
       await store.sendQuery("What is AI?");
 
@@ -336,7 +357,12 @@ describe("Chat Store", () => {
         updated_at: "",
       };
       store.sessions = [
-        { session_id: 1, title: "New Conversation", created_at: "", updated_at: "" },
+        {
+          session_id: 1,
+          title: "New Conversation",
+          created_at: "",
+          updated_at: "",
+        },
       ];
       store.queries = [];
       const longQuery =
@@ -349,7 +375,9 @@ describe("Chat Store", () => {
         sources: [],
         created_at: "2024-01-01",
       };
-      mockedApi.post.mockResolvedValueOnce({ data: { data: mockQuery } } as any);
+      mockedApi.post.mockResolvedValueOnce({
+        data: { data: mockQuery },
+      } as any);
 
       await store.sendQuery(longQuery);
 
@@ -400,7 +428,9 @@ describe("Chat Store", () => {
         created_at: "",
         updated_at: "",
       };
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       mockedApi.post.mockRejectedValueOnce(new Error("Network error"));
 
       const result = await store.sendQuery("Test query");

@@ -6,6 +6,9 @@ const apiBaseUrl = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api/v1`
   : "/api/v1";
 
+console.log("[API Client] Base URL:", apiBaseUrl);
+console.log("[API Client] VITE_API_URL env:", import.meta.env.VITE_API_URL);
+
 const api = axios.create({
   baseURL: apiBaseUrl,
   headers: {
@@ -14,12 +17,29 @@ const api = axios.create({
   withCredentials: true, // Send HTTP-only cookies with requests
 });
 
-// Response interceptor - handle auth errors
+// Request interceptor - log outgoing requests
+api.interceptors.request.use(
+  (config) => {
+    console.log(`[API Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, {
+      data: config.data,
+      withCredentials: config.withCredentials,
+    });
+    return config;
+  },
+  (error) => {
+    console.error("[API Request Error]", error);
+    return Promise.reject(error);
+  },
+);
+
+// Response interceptor - handle auth errors and log responses
 api.interceptors.response.use(
   (response) => {
+    console.log(`[API Response] ${response.status} ${response.config.url}`, response.data);
     return response;
   },
   (error) => {
+    console.error(`[API Response Error] ${error.response?.status} ${error.config?.url}`, error.response?.data);
     if (error.response?.status === 401) {
       const authStore = useAuthStore();
       authStore.logout();

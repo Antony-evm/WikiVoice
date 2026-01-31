@@ -247,10 +247,14 @@ class RAGService:
     ) -> list[QueryResponse] | None:
         """Get the full conversation history for a session."""
         session = await self.session_repository.get_session_by_id(session_id)
-        if not session or session.user_id != user_id:
+        if not session:
+            logger.warning(f"[RAGService] Session not found - session_id={session_id}")
+            return None
+        if session.user_id != user_id:
             return None
 
         queries = await self.query_repository.get_queries_by_session_id(session_id)
+        logger.info(f"[RAGService] Returning {len(queries)} queries for session_id={session_id}")
         return [
             QueryResponse(
                 query_id=q.query_id,

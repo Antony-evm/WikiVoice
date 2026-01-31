@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api, { getErrorMessage } from '@/api/client'
@@ -13,6 +13,27 @@ const confirmPassword = ref('')
 const isLoading = ref(false)
 const error = ref('')
 
+const isFormValid = computed(() => {
+  if (!email.value || !password.value || !confirmPassword.value) {
+    return false
+  }
+
+  if (password.value !== confirmPassword.value) {
+    return false
+  }
+
+  if (password.value.length < 8 || password.value.length > 32) {
+    return false
+  }
+
+  const hasUppercase = /[A-Z]/.test(password.value)
+  const hasLowercase = /[a-z]/.test(password.value)
+  const hasNumber = /\d/.test(password.value)
+  const hasSymbol = /[^a-zA-Z0-9\s]/.test(password.value)
+
+  return hasUppercase && hasLowercase && hasNumber && hasSymbol
+})
+
 async function handleRegister() {
   if (!email.value || !password.value || !confirmPassword.value) {
     error.value = 'Please fill in all fields'
@@ -24,8 +45,18 @@ async function handleRegister() {
     return
   }
 
-  if (password.value.length < 8) {
-    error.value = 'Password must be at least 8 characters'
+  if (password.value.length < 8 || password.value.length > 32) {
+    error.value = 'Password must be between 8 and 32 characters'
+    return
+  }
+
+  const hasUppercase = /[A-Z]/.test(password.value)
+  const hasLowercase = /[a-z]/.test(password.value)
+  const hasNumber = /\d/.test(password.value)
+  const hasSymbol = /[^a-zA-Z0-9\s]/.test(password.value)
+
+  if (!hasUppercase || !hasLowercase || !hasNumber || !hasSymbol) {
+    error.value = 'Password must include uppercase, lowercase, number, and symbol'
     return
   }
 
@@ -101,7 +132,7 @@ async function handleRegister() {
             class="w-full px-4 py-3 bg-[var(--background)] border border-[var(--border)] rounded-lg text-base text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all" />
         </div>
 
-        <button type="submit" :disabled="isLoading"
+        <button type="submit" :disabled="isLoading || !isFormValid"
           class="w-full py-3 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold font-serif text-base rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider">
           {{ isLoading ? 'Registering...' : 'Create Credentials' }}
         </button>

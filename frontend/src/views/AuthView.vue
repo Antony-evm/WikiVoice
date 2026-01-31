@@ -49,11 +49,11 @@ const passwordStrength = computed(() => {
 
     let score = 0
     const checks = {
-        length: pwd.length >= 8,
+        length: pwd.length >= 8 && pwd.length <= 32,
         lowercase: /[a-z]/.test(pwd),
         uppercase: /[A-Z]/.test(pwd),
         number: /\d/.test(pwd),
-        symbol: /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
+        symbol: /[^a-zA-Z0-9\s]/.test(pwd),
     }
 
     if (checks.length) score++
@@ -62,7 +62,7 @@ const passwordStrength = computed(() => {
     if (checks.number) score++
     if (checks.symbol) score++
 
-    const labels = ['', 'Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong']
+    const labels = ['', 'Very Weak', 'Weak', 'Fair', 'Good', 'Strong']
     const colors = ['', 'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500', 'bg-emerald-500']
 
     return {
@@ -137,8 +137,8 @@ async function handleRegister() {
         return
     }
 
-    if (passwordStrength.value.score < 4) {
-        error.value = 'Password must include uppercase, lowercase, number, and be at least 8 characters'
+    if (passwordStrength.value.score < 5) {
+        error.value = 'Password must be 8-32 characters and include uppercase, lowercase, number, and symbol'
         return
     }
 
@@ -280,7 +280,7 @@ function goBack() {
                             <div class="grid grid-cols-2 gap-2 text-xs">
                                 <div
                                     :class="passwordStrength.checks?.length ? 'text-green-400' : 'text-[var(--text-secondary)]'">
-                                    {{ passwordStrength.checks?.length ? '✓' : '○' }} 8+ characters
+                                    {{ passwordStrength.checks?.length ? '✓' : '○' }} 8-32 characters
                                 </div>
                                 <div
                                     :class="passwordStrength.checks?.uppercase ? 'text-green-400' : 'text-[var(--text-secondary)]'">
@@ -293,6 +293,10 @@ function goBack() {
                                 <div
                                     :class="passwordStrength.checks?.number ? 'text-green-400' : 'text-[var(--text-secondary)]'">
                                     {{ passwordStrength.checks?.number ? '✓' : '○' }} Number
+                                </div>
+                                <div
+                                    :class="passwordStrength.checks?.symbol ? 'text-green-400' : 'text-[var(--text-secondary)]'">
+                                    {{ passwordStrength.checks?.symbol ? '✓' : '○' }} Symbol
                                 </div>
                             </div>
                         </div>
@@ -310,7 +314,7 @@ function goBack() {
                     </div>
 
                     <button type="submit"
-                        :disabled="isLoading || passwordStrength.score < 4 || password !== confirmPassword"
+                        :disabled="isLoading || passwordStrength.score < 5 || password !== confirmPassword"
                         class="w-full py-4 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                         {{ isLoading ? 'Creating account...' : 'Create Account' }}
                     </button>

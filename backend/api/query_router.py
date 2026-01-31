@@ -1,5 +1,7 @@
 """Query router for RAG query endpoints."""
 
+import logging
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +20,8 @@ from infrastructure.query_repository import QueryRepository
 from infrastructure.rag_service import RAGService
 from infrastructure.session_repository import SessionRepository
 from infrastructure.wikipedia_client import WikipediaClient
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/query")
 

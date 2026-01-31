@@ -33,12 +33,15 @@ export const useChatStore = defineStore("chat", () => {
 
   // Actions
   async function fetchSessions() {
+    console.log("[ChatStore] fetchSessions() called");
     isLoading.value = true;
     try {
       const response = await api.get("/sessions");
+      console.log("[ChatStore] fetchSessions response:", response.data);
       sessions.value = response.data.data.sessions;
+      console.log("[ChatStore] Sessions loaded:", sessions.value.length);
     } catch (error) {
-      console.error("Failed to fetch sessions:", error);
+      console.error("[ChatStore] Failed to fetch sessions:", error);
     } finally {
       isLoading.value = false;
     }
@@ -47,18 +50,21 @@ export const useChatStore = defineStore("chat", () => {
   async function createSession(
     title = "New Conversation",
   ): Promise<Session | null> {
+    console.log("[ChatStore] createSession() called with title:", title);
     try {
       const response = await api.post("/sessions", { title });
       const session = response.data.data;
+      console.log("[ChatStore] Session created:", session);
       sessions.value.unshift(session);
       return session;
     } catch (error) {
-      console.error("Failed to create session:", error);
+      console.error("[ChatStore] Failed to create session:", error);
       return null;
     }
   }
 
   async function loadSession(sessionId: number) {
+    console.log("[ChatStore] loadSession() called with sessionId:", sessionId);
     isLoading.value = true;
     try {
       const [sessionRes, historyRes] = await Promise.all([
@@ -67,8 +73,10 @@ export const useChatStore = defineStore("chat", () => {
       ]);
       currentSession.value = sessionRes.data.data;
       queries.value = historyRes.data.data.queries;
+      console.log("[ChatStore] Session loaded:", currentSession.value);
+      console.log("[ChatStore] Queries loaded:", queries.value.length);
     } catch (error) {
-      console.error("Failed to load session:", error);
+      console.error("[ChatStore] Failed to load session:", error);
     } finally {
       isLoading.value = false;
     }
@@ -78,7 +86,11 @@ export const useChatStore = defineStore("chat", () => {
     queryText: string,
     inputMode = "text",
   ): Promise<Query | null> {
-    if (!currentSession.value) return null;
+    console.log("[ChatStore] sendQuery() called:", { queryText, inputMode, sessionId: currentSession.value?.session_id });
+    if (!currentSession.value) {
+      console.warn("[ChatStore] No current session, cannot send query");
+      return null;
+    }
 
     isSending.value = true;
     try {
@@ -88,6 +100,7 @@ export const useChatStore = defineStore("chat", () => {
         input_mode: inputMode,
       });
       const query = response.data.data as Query;
+      console.log("[ChatStore] Query response received:", query);
       queries.value = [...queries.value, query];
 
       // Update session title if this was the first query
@@ -132,6 +145,15 @@ export const useChatStore = defineStore("chat", () => {
     queries.value = [];
   }
 
+  function clearAllState() {
+    console.log("[ChatStore] Clearing all state (logout/user switch)");
+    sessions.value = [];
+    currentSession.value = null;
+    queries.value = [];
+    isLoading.value = false;
+    isSending.value = false;
+  }
+
   return {
     // State
     sessions,
@@ -146,5 +168,6 @@ export const useChatStore = defineStore("chat", () => {
     sendQuery,
     deleteSession,
     clearCurrentSession,
+    clearAllState,
   };
 });

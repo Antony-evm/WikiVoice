@@ -44,8 +44,10 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
     session_factory = get_session_factory()
     async with session_factory() as session:
         try:
+            logger.info("[Database] Session started")
             yield session
             await session.commit()
+            logger.info("[Database] Session committed successfully")
         except IntegrityError as e:
             await session.rollback()
             logger.exception("database_integrity_error", error_type=type(e).__name__)
@@ -56,6 +58,7 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
             raise DatabaseConnectionError("Unable to connect to the database") from e
         except DomainError:
             await session.rollback()
+            logger.warning("[Database] Session rolled back due to DomainError")
             raise
         except Exception as e:
             await session.rollback()

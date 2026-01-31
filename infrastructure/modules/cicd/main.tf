@@ -212,10 +212,7 @@ resource "aws_iam_role" "github_actions_backend_deploy" {
           }
           StringLike = {
             "token.actions.githubusercontent.com:sub" = [
-              "repo:${var.github_org}/${var.backend_repo}:ref:refs/heads/main",
-              "repo:${var.github_org}/${var.backend_repo}:pull_request",
-              "repo:${var.github_org}/${var.backend_repo}:environment:production",
-              "repo:${var.github_org}/${var.backend_repo}:environment:staging"
+              "repo:${var.github_org}/${var.backend_repo}:*"
             ]
           }
         }

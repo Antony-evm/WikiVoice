@@ -348,8 +348,8 @@ jobs:
       id-token: write
       contents: read
     env:
-      ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
-      ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
+      ECS_CLUSTER_NAME: ${{ secrets.ECS_CLUSTER_NAME }}
+      ECS_SERVICE_NAME_NAME: ${{ secrets.ECS_SERVICE_NAME }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -379,14 +379,14 @@ jobs:
       - name: Update ECS service
         run: |
           aws ecs update-service \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --service ${{ env.ECS_SERVICE }} \
+            --cluster ${{ env.ECS_CLUSTER_NAME }} \
+            --service ${{ env.ECS_SERVICE_NAME }} \
             --force-new-deployment \
             --query 'service.serviceName' \
             --output text
 
           echo "### Deployment Triggered 🚀" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Cluster:** \`${{ env.ECS_CLUSTER }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Service:** \`${{ env.ECS_SERVICE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Cluster:** \`${{ env.ECS_CLUSTER_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Service:** \`${{ env.ECS_SERVICE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Image Tag:** \`${{ steps.meta.outputs.short-sha }}\`" >> $GITHUB_STEP_SUMMARY

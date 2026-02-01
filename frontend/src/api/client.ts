@@ -1,45 +1,18 @@
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
 
-// Use environment variable for API URL in production, fallback to relative path for dev proxy
-const apiBaseUrl = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api/v1`
-  : "/api/v1";
-
-console.log("[API Client] Base URL:", apiBaseUrl);
-console.log("[API Client] VITE_API_URL env:", import.meta.env.VITE_API_URL);
-
 const api = axios.create({
-  baseURL: apiBaseUrl,
+  baseURL: "/api/v1",
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true, // Send HTTP-only cookies with requests
+  withCredentials: true, // Send cookies automatically
 });
 
-// Request interceptor - log outgoing requests
-api.interceptors.request.use(
-  (config) => {
-    console.log(`[API Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, {
-      data: config.data,
-      withCredentials: config.withCredentials,
-    });
-    return config;
-  },
-  (error) => {
-    console.error("[API Request Error]", error);
-    return Promise.reject(error);
-  },
-);
-
-// Response interceptor - handle auth errors and log responses
+// Response interceptor - handle 401 errors
 api.interceptors.response.use(
-  (response) => {
-    console.log(`[API Response] ${response.status} ${response.config.url}`, response.data);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error(`[API Response Error] ${error.response?.status} ${error.config?.url}`, error.response?.data);
     if (error.response?.status === 401) {
       const authStore = useAuthStore();
       authStore.logout();

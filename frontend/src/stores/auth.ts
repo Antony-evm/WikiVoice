@@ -1,61 +1,49 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import { useChatStore } from "./chat";
+
+/**
+ * Get a cookie value by name.
+ * The stytch_user_id cookie is readable (not httpOnly) to check auth status.
+ */
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return match?.[2] ? decodeURIComponent(match[2]) : null;
+}
 
 export const useAuthStore = defineStore("auth", () => {
   const router = useRouter();
 
-  // State - only non-sensitive data in localStorage
-  // Auth tokens are now stored in HTTP-only cookies (not accessible to JS)
+  // State - only non-sensitive user info stored in localStorage
   const userId = ref<number | null>(
     localStorage.getItem("userId")
       ? parseInt(localStorage.getItem("userId")!)
       : null,
   );
   const email = ref<string | null>(localStorage.getItem("email"));
-  const isLoggedIn = ref<boolean>(localStorage.getItem("isLoggedIn") === "true");
 
-  // Computed - based on localStorage flag (cookies handle actual auth)
-  const isAuthenticated = computed(() => isLoggedIn.value);
+  // Computed - check stytch_user_id cookie for auth status
+  const isAuthenticated = computed(() => {
+    // Check for stytch_user_id cookie (set by backend, readable by frontend)
+    const stytchUserId = getCookie("stytch_user_id");
+    return !!stytchUserId && !!userId.value;
+  });
 
   // Actions
   function setUser(id: number, userEmail: string) {
-    // If switching users, clear chat state to prevent data leakage
-    if (userId.value !== null && userId.value !== id) {
-      const chatStore = useChatStore();
-      chatStore.clearAllState();
-    }
-
     userId.value = id;
     email.value = userEmail;
-    isLoggedIn.value = true;
     localStorage.setItem("userId", id.toString());
     localStorage.setItem("email", userEmail);
-    localStorage.setItem("isLoggedIn", "true");
   }
 
-  async function logout() {
-    // Clear chat state FIRST to prevent data leakage to next user
-    const chatStore = useChatStore();
-    chatStore.clearAllState();
-
-    // Call backend to clear HTTP-only cookies
-    try {
-      const api = (await import("@/api/client")).default;
-      await api.post("/auth/logout");
-    } catch {
-      // Ignore errors during logout
-    }
-
-    // Clear local state
+  function logout() {
     userId.value = null;
     email.value = null;
-    isLoggedIn.value = false;
     localStorage.removeItem("userId");
     localStorage.removeItem("email");
-    localStorage.removeItem("isLoggedIn");
-
+    // Clear auth cookies by setting them to expire
+    document.cookie = "stytch_user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     router.push({ name: "auth" });
   }
 

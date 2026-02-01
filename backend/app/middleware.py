@@ -9,18 +9,12 @@ from app.response_headers_middleware import ResponseHeadersMiddleware
 
 
 def include_middleware(app: FastAPI) -> None:
-    """Include middleware in the FastAPI application.
-
-    Note: Middleware is executed in reverse order of addition.
-    Last added middleware runs first (outermost).
-    """
+    """Include middleware in the FastAPI application."""
     settings = get_settings()
 
-    # Parse frontend URLs - support comma-separated list for multiple origins
     allowed_origins = [
         origin.strip() for origin in settings.frontend_url.split(",") if origin.strip()
     ]
-    # Always allow localhost for development
     if "http://localhost:5173" not in allowed_origins:
         allowed_origins.append("http://localhost:5173")
 

@@ -36,7 +36,7 @@ auth_router = APIRouter()
 
     **Returns:**
     - User profile with ID and email
-    - Session data in HTTP-only cookies
+    - Session data in response cookies
     """,
     responses={
         409: USER_EXISTS_409,
@@ -52,7 +52,6 @@ async def register_user(
     """Register a new user with email and password."""
     result = await auth_service.register_user(register_request)
 
-    # Set HTTP-only cookies for auth tokens
     result.session.set_cookies(response)
 
     return SuccessResponse(data=result.user)
@@ -95,7 +94,7 @@ async def check_user_exists(
 
     **Returns:**
     - User profile with ID and email
-    - Session data in HTTP-only cookies
+    - Session data in response cookies
     """,
     responses={
         401: UNAUTHORIZED_401,
@@ -111,23 +110,6 @@ async def login(
     """Login with email and password."""
     result = await auth_service.login_user(login_request)
 
-    # Set HTTP-only cookies for auth tokens
     result.session.set_cookies(response)
 
     return SuccessResponse(data=result.user)
-
-
-@auth_router.post(
-    "/logout",
-    status_code=status.HTTP_200_OK,
-    summary="Logout and clear session cookies",
-    description="Clears all authentication cookies to log out the user.",
-)
-async def logout(response: Response) -> SuccessResponse[dict]:
-    """Clear authentication cookies."""
-    # Clear all auth cookies
-    response.delete_cookie(key="session_jwt", path="/")
-    response.delete_cookie(key="session_token", path="/")
-    response.delete_cookie(key="stytch_user_id", path="/")
-
-    return SuccessResponse(data={"message": "Logged out successfully"})

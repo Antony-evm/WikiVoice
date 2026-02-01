@@ -49,11 +49,11 @@ const passwordStrength = computed(() => {
 
     let score = 0
     const checks = {
-        length: pwd.length >= 8 && pwd.length <= 32,
+        length: pwd.length >= 8,
         lowercase: /[a-z]/.test(pwd),
         uppercase: /[A-Z]/.test(pwd),
         number: /\d/.test(pwd),
-        symbol: /[^a-zA-Z0-9\s]/.test(pwd),
+        symbol: /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
     }
 
     if (checks.length) score++
@@ -62,7 +62,7 @@ const passwordStrength = computed(() => {
     if (checks.number) score++
     if (checks.symbol) score++
 
-    const labels = ['', 'Very Weak', 'Weak', 'Fair', 'Good', 'Strong']
+    const labels = ['', 'Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong']
     const colors = ['', 'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500', 'bg-emerald-500']
 
     return {
@@ -71,12 +71,6 @@ const passwordStrength = computed(() => {
         color: colors[score],
         checks,
     }
-})
-
-const authSubtitle = computed(() => {
-    if (step.value === 'email') return 'Sign in to continue'
-    if (step.value === 'login') return 'Welcome back!'
-    return 'Create your account'
 })
 
 // Step 1: Check if email exists
@@ -137,8 +131,8 @@ async function handleRegister() {
         return
     }
 
-    if (passwordStrength.value.score < 5) {
-        error.value = 'Password must be 8-32 characters and include uppercase, lowercase, number, and symbol'
+    if (passwordStrength.value.score < 4) {
+        error.value = 'Password must include uppercase, lowercase, number, and be at least 8 characters'
         return
     }
 
@@ -178,7 +172,8 @@ function goBack() {
                 </div>
                 <h1 class="text-4xl font-bold text-[var(--text-primary)] mb-3">WikiVoice</h1>
                 <p class="text-lg text-[var(--text-secondary)]">
-                    {{ authSubtitle }}
+                    {{ step === 'email' ? 'Sign in to continue' : step === 'login' ?
+                        'Welcome back!' : 'Create your account' }}
                 </p>
             </div>
 
@@ -216,13 +211,14 @@ function goBack() {
                 <!-- Step 2a: Login -->
                 <form v-else-if="step === 'login'" @submit.prevent="handleLogin" class="space-y-6">
                     <div
-                        class="flex items-center gap-3 p-4 rounded-xl bg-[var(--background)] border border-[var(--border)]">
-                        <span class="text-2xl">👤</span>
-                        <div class="flex-1">
+                        class="flex items-center gap-3 p-4 rounded-xl bg-[var(--background)] border border-[var(--border)] overflow-hidden">
+                        <span class="text-2xl flex-shrink-0">👤</span>
+                        <div class="flex-1 min-w-0">
                             <p class="text-sm text-[var(--text-secondary)]">Signing in as</p>
-                            <p class="text-[var(--text-primary)] font-medium">{{ email }}</p>
+                            <p class="text-[var(--text-primary)] font-medium truncate" :title="email">{{ email }}</p>
                         </div>
-                        <button type="button" @click="goBack" class="text-[var(--primary)] hover:underline text-sm">
+                        <button type="button" @click="goBack"
+                            class="text-[var(--primary)] hover:underline text-sm flex-shrink-0">
                             Change
                         </button>
                     </div>
@@ -244,13 +240,14 @@ function goBack() {
                 <!-- Step 2b: Register -->
                 <form v-else @submit.prevent="handleRegister" class="space-y-6">
                     <div
-                        class="flex items-center gap-3 p-4 rounded-xl bg-[var(--background)] border border-[var(--border)]">
-                        <span class="text-2xl">✨</span>
-                        <div class="flex-1">
+                        class="flex items-center gap-3 p-4 rounded-xl bg-[var(--background)] border border-[var(--border)] overflow-hidden">
+                        <span class="text-2xl flex-shrink-0">✨</span>
+                        <div class="flex-1 min-w-0">
                             <p class="text-sm text-[var(--text-secondary)]">Creating account for</p>
-                            <p class="text-[var(--text-primary)] font-medium">{{ email }}</p>
+                            <p class="text-[var(--text-primary)] font-medium truncate" :title="email">{{ email }}</p>
                         </div>
-                        <button type="button" @click="goBack" class="text-[var(--primary)] hover:underline text-sm">
+                        <button type="button" @click="goBack"
+                            class="text-[var(--primary)] hover:underline text-sm flex-shrink-0">
                             Change
                         </button>
                     </div>
@@ -280,7 +277,7 @@ function goBack() {
                             <div class="grid grid-cols-2 gap-2 text-xs">
                                 <div
                                     :class="passwordStrength.checks?.length ? 'text-green-400' : 'text-[var(--text-secondary)]'">
-                                    {{ passwordStrength.checks?.length ? '✓' : '○' }} 8-32 characters
+                                    {{ passwordStrength.checks?.length ? '✓' : '○' }} 8+ characters
                                 </div>
                                 <div
                                     :class="passwordStrength.checks?.uppercase ? 'text-green-400' : 'text-[var(--text-secondary)]'">
@@ -293,10 +290,6 @@ function goBack() {
                                 <div
                                     :class="passwordStrength.checks?.number ? 'text-green-400' : 'text-[var(--text-secondary)]'">
                                     {{ passwordStrength.checks?.number ? '✓' : '○' }} Number
-                                </div>
-                                <div
-                                    :class="passwordStrength.checks?.symbol ? 'text-green-400' : 'text-[var(--text-secondary)]'">
-                                    {{ passwordStrength.checks?.symbol ? '✓' : '○' }} Symbol
                                 </div>
                             </div>
                         </div>
@@ -314,7 +307,7 @@ function goBack() {
                     </div>
 
                     <button type="submit"
-                        :disabled="isLoading || passwordStrength.score < 5 || password !== confirmPassword"
+                        :disabled="isLoading || passwordStrength.score < 4 || password !== confirmPassword"
                         class="w-full py-4 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                         {{ isLoading ? 'Creating account...' : 'Create Account' }}
                     </button>

@@ -46,25 +46,25 @@ output "ecs_service_name" {
   value       = module.ecs.service_name
 }
 
-# CloudFront Outputs
+# CloudFront Outputs (serves both frontend and API from same domain)
 output "cloudfront_distribution_id" {
   description = "ID of the CloudFront distribution"
-  value       = module.cloudfront.distribution_id
+  value       = module.frontend.cloudfront_distribution_id
 }
 
 output "cloudfront_domain_name" {
-  description = "Domain name of the CloudFront distribution - USE THIS for your frontend API endpoint"
-  value       = module.cloudfront.distribution_domain_name
+  description = "Domain name of the CloudFront distribution"
+  value       = module.frontend.cloudfront_domain_name
 }
 
 output "cloudfront_distribution_arn" {
   description = "ARN of the CloudFront distribution"
-  value       = module.cloudfront.distribution_arn
+  value       = module.frontend.cloudfront_distribution_arn
 }
 
 output "cloudfront_origin_secret_arn" {
   description = "ARN of the Secrets Manager secret containing CloudFront origin verification header"
-  value       = module.cloudfront.origin_verify_secret_arn
+  value       = module.frontend.origin_verify_secret_arn
 }
 
 # WAF Outputs
@@ -78,10 +78,10 @@ output "waf_web_acl_arn" {
   value       = module.waf.web_acl_arn
 }
 
-# API Access
+# API Access (now same-origin with frontend)
 output "api_url" {
-  description = "CloudFront URL for API access"
-  value       = "https://${module.cloudfront.distribution_domain_name}"
+  description = "API URL (same domain as frontend, /api path)"
+  value       = module.frontend.api_url
 }
 
 output "alb_dns_name" {
@@ -121,14 +121,14 @@ output "github_actions_frontend_deploy_role_arn" {
   value       = module.cicd.github_actions_frontend_deploy_role_arn
 }
 
-# Frontend Outputs
+# Frontend Outputs (now serves API too)
 output "frontend_bucket_name" {
   description = "S3 bucket name for frontend"
   value       = module.frontend.bucket_name
 }
 
 output "frontend_cloudfront_distribution_id" {
-  description = "CloudFront distribution ID for frontend"
+  description = "CloudFront distribution ID"
   value       = module.frontend.cloudfront_distribution_id
 }
 
@@ -167,14 +167,7 @@ output "next_steps" {
     WIKIVOICE - INFRASTRUCTURE DEPLOYED
     ========================================
 
-    Application Load Balancer URL:
     ${var.enable_https ? "https://${module.ecs.alb_dns_name}" : "http://${module.ecs.alb_dns_name}"}
-
-    Frontend URL:
-    ${module.frontend.frontend_url}
-
-    API URL (CloudFront):
-    https://${module.cloudfront.distribution_domain_name}
 
     ECR Repository:
     ${module.ecr.repository_url}
@@ -202,7 +195,7 @@ output "next_steps" {
     AWS_ROLE_ARN            = ${module.cicd.github_actions_frontend_deploy_role_arn}
     S3_BUCKET               = ${module.frontend.bucket_name}
     CLOUDFRONT_DISTRIBUTION = ${module.frontend.cloudfront_distribution_id}
-    VITE_API_URL            = https://${module.cloudfront.distribution_domain_name}
+    VITE_API_URL            = /api  (relative path - same origin now!)
 
     ========================================
     GITHUB SECRETS FOR INFRA REPO

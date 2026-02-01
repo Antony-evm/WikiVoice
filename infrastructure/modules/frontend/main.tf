@@ -1,6 +1,7 @@
 # ============================================
 # Frontend Static Hosting Module
 # S3 bucket + CloudFront for Vue.js SPA
+# Now also routes /api/* to backend ALB (same-origin)
 # ============================================
 
 # S3 bucket for frontend static files
@@ -50,6 +51,32 @@ resource "aws_cloudfront_origin_access_control" "frontend" {
   signing_protocol                  = "sigv4"
 }
 
+# ============================================
+# API Origin Verification (for ALB)
+# ============================================
+
+resource "random_password" "origin_verify" {
+  count   = var.alb_dns_name != "" ? 1 : 0
+  length  = 32
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "cloudfront_origin" {
+  count       = var.alb_dns_name != "" ? 1 : 0
+  name_prefix = "${var.project_name}-${var.environment}-cloudfront-origin-"
+  description = "CloudFront origin verification secret for ALB"
+
+  tags = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "cloudfront_origin" {
+  count     = var.alb_dns_name != "" ? 1 : 0
+  secret_id = aws_secretsmanager_secret.cloudfront_origin[0].id
+  secret_string = jsonencode({
+    X-Origin-Verify = random_password.origin_verify[0].result
+  })
+}
+
 # CloudFront cache policy for static assets
 resource "aws_cloudfront_cache_policy" "frontend" {
   name        = "${var.project_name}-${var.environment}-frontend-cache"
@@ -70,6 +97,55 @@ resource "aws_cloudfront_cache_policy" "frontend" {
     }
     enable_accept_encoding_brotli = true
     enable_accept_encoding_gzip   = true
+  }
+}
+
+# ============================================
+# API Cache and Origin Request Policies
+# ============================================
+
+resource "aws_cloudfront_cache_policy" "api" {
+  count   = var.alb_dns_name != "" ? 1 : 0
+  name    = "${var.project_name}-${var.environment}-api-cache"
+  comment = "Cache policy for API - no caching, forward cookies for auth"
+
+  default_ttl = 0
+  max_ttl     = 0
+  min_ttl     = 0
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+    headers_config {
+      header_behavior = "none"
+    }
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+    enable_accept_encoding_gzip   = false
+    enable_accept_encoding_brotli = false
+  }
+}
+
+resource "aws_cloudfront_origin_request_policy" "api" {
+  count   = var.alb_dns_name != "" ? 1 : 0
+  name    = "${var.project_name}-${var.environment}-api-origin-request"
+  comment = "Origin request policy for API - forward all for auth"
+
+  cookies_config {
+    cookie_behavior = "all"
+  }
+
+  headers_config {
+    header_behavior = "allViewerAndWhitelistCloudFront"
+    headers {
+      items = ["CloudFront-Viewer-Country"]
+    }
+  }
+
+  query_strings_config {
+    query_string_behavior = "all"
   }
 }
 
@@ -108,12 +184,17 @@ resource "aws_cloudfront_response_headers_policy" "frontend" {
 resource "aws_cloudfront_function" "spa_routing" {
   name    = "${var.project_name}-${var.environment}-spa-routing"
   runtime = "cloudfront-js-2.0"
-  comment = "Rewrite requests for SPA routing"
+  comment = "Rewrite requests for SPA routing (skip /api paths)"
   publish = true
   code    = <<-EOF
     function handler(event) {
       var request = event.request;
       var uri = request.uri;
+
+      // Don't rewrite /api requests - they go to the API origin
+      if (uri.startsWith('/api')) {
+        return request;
+      }
 
       // Check if the URI has a file extension
       if (uri.includes('.')) {
@@ -137,10 +218,34 @@ resource "aws_cloudfront_distribution" "frontend" {
   http_version        = "http2and3"
   web_acl_id          = var.waf_web_acl_arn != "" ? var.waf_web_acl_arn : null
 
+  # Origin 1: S3 for frontend static files
   origin {
     domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id                = "s3-frontend"
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
+  }
+
+  # Origin 2: ALB for API (conditional - only if alb_dns_name is provided)
+  dynamic "origin" {
+    for_each = var.alb_dns_name != "" ? [1] : []
+    content {
+      domain_name = var.alb_dns_name
+      origin_id   = "alb-api"
+
+      custom_origin_config {
+        http_port                = 80
+        https_port               = 443
+        origin_protocol_policy   = var.alb_https_enabled ? "https-only" : "http-only"
+        origin_ssl_protocols     = ["TLSv1.2"]
+        origin_read_timeout      = 60
+        origin_keepalive_timeout = 5
+      }
+
+      custom_header {
+        name  = "X-Origin-Verify"
+        value = random_password.origin_verify[0].result
+      }
+    }
   }
 
   default_cache_behavior {
@@ -157,6 +262,22 @@ resource "aws_cloudfront_distribution" "frontend" {
     function_association {
       event_type   = "viewer-request"
       function_arn = aws_cloudfront_function.spa_routing.arn
+    }
+  }
+
+  # API behavior: /api/* -> ALB (only if alb_dns_name is provided)
+  dynamic "ordered_cache_behavior" {
+    for_each = var.alb_dns_name != "" ? [1] : []
+    content {
+      path_pattern           = "/api/*"
+      allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+      cached_methods         = ["GET", "HEAD"]
+      target_origin_id       = "alb-api"
+      viewer_protocol_policy = "redirect-to-https"
+      compress               = true
+
+      cache_policy_id          = aws_cloudfront_cache_policy.api[0].id
+      origin_request_policy_id = aws_cloudfront_origin_request_policy.api[0].id
     }
   }
 

@@ -1,5 +1,6 @@
 /**
  * Tests for auth store behavior.
+ * Auth is now cookie-based - stytch_user_id cookie is checked for auth status.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
@@ -11,23 +12,26 @@ vi.mock("vue-router", () => ({
   }),
 }));
 
-// Mock api client - use function factory for hoisting
-vi.mock("@/api/client", () => ({
-  default: {
-    post: vi.fn(),
-  },
-}));
+// Helper to set a cookie in tests
+function setCookie(name: string, value: string) {
+  Object.defineProperty(document, "cookie", {
+    writable: true,
+    value: `${name}=${value}`,
+  });
+}
 
-// Import mock after vi.mock
-import api from "@/api/client";
-
-// Cast api methods for mocking
-const mockedApi = vi.mocked(api, { deep: true });
+function clearCookie() {
+  Object.defineProperty(document, "cookie", {
+    writable: true,
+    value: "",
+  });
+}
 
 describe("Auth Store", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     localStorage.clear();
+    clearCookie();
     vi.clearAllMocks();
   });
 
@@ -66,12 +70,29 @@ describe("Auth Store", () => {
       expect(store.email).toBe("test@example.com");
     });
 
-    it("should restore isAuthenticated from localStorage", async () => {
-      localStorage.setItem("isLoggedIn", "true");
+    it("should be authenticated when cookie and userId are present", async () => {
+      localStorage.setItem("userId", "42");
+      setCookie("stytch_user_id", "user-123");
       vi.resetModules();
       const { useAuthStore } = await import("./auth");
       const store = useAuthStore();
       expect(store.isAuthenticated).toBe(true);
+    });
+
+    it("should not be authenticated when only cookie is present", async () => {
+      setCookie("stytch_user_id", "user-123");
+      vi.resetModules();
+      const { useAuthStore } = await import("./auth");
+      const store = useAuthStore();
+      expect(store.isAuthenticated).toBe(false);
+    });
+
+    it("should not be authenticated when only userId is present", async () => {
+      localStorage.setItem("userId", "42");
+      vi.resetModules();
+      const { useAuthStore } = await import("./auth");
+      const store = useAuthStore();
+      expect(store.isAuthenticated).toBe(false);
     });
   });
 
@@ -94,7 +115,8 @@ describe("Auth Store", () => {
       expect(store.email).toBe("user@example.com");
     });
 
-    it("should set isAuthenticated to true", async () => {
+    it("should be authenticated when cookie is also present", async () => {
+      setCookie("stytch_user_id", "user-123");
       const { useAuthStore } = await import("./auth");
       const store = useAuthStore();
 
@@ -120,15 +142,6 @@ describe("Auth Store", () => {
 
       expect(localStorage.getItem("email")).toBe("user@example.com");
     });
-
-    it("should persist isLoggedIn to localStorage", async () => {
-      const { useAuthStore } = await import("./auth");
-      const store = useAuthStore();
-
-      store.setUser(123, "user@example.com");
-
-      expect(localStorage.getItem("isLoggedIn")).toBe("true");
-    });
   });
 
   describe("logout", () => {
@@ -137,7 +150,7 @@ describe("Auth Store", () => {
       const store = useAuthStore();
       store.setUser(123, "user@example.com");
 
-      await store.logout();
+      store.logout();
 
       expect(store.userId).toBeNull();
     });
@@ -147,17 +160,18 @@ describe("Auth Store", () => {
       const store = useAuthStore();
       store.setUser(123, "user@example.com");
 
-      await store.logout();
+      store.logout();
 
       expect(store.email).toBeNull();
     });
 
     it("should set isAuthenticated to false", async () => {
+      setCookie("stytch_user_id", "user-123");
       const { useAuthStore } = await import("./auth");
       const store = useAuthStore();
       store.setUser(123, "user@example.com");
 
-      await store.logout();
+      store.logout();
 
       expect(store.isAuthenticated).toBe(false);
     });
@@ -167,7 +181,7 @@ describe("Auth Store", () => {
       const store = useAuthStore();
       store.setUser(123, "user@example.com");
 
-      await store.logout();
+      store.logout();
 
       expect(localStorage.getItem("userId")).toBeNull();
     });
@@ -177,41 +191,9 @@ describe("Auth Store", () => {
       const store = useAuthStore();
       store.setUser(123, "user@example.com");
 
-      await store.logout();
+      store.logout();
 
       expect(localStorage.getItem("email")).toBeNull();
-    });
-
-    it("should remove isLoggedIn from localStorage", async () => {
-      const { useAuthStore } = await import("./auth");
-      const store = useAuthStore();
-      store.setUser(123, "user@example.com");
-
-      await store.logout();
-
-      expect(localStorage.getItem("isLoggedIn")).toBeNull();
-    });
-
-    it("should call backend logout endpoint", async () => {
-      const { useAuthStore } = await import("./auth");
-      const store = useAuthStore();
-      store.setUser(123, "user@example.com");
-
-      await store.logout();
-
-      expect(mockedApi.post).toHaveBeenCalledWith("/auth/logout");
-    });
-
-    it("should handle backend logout errors gracefully", async () => {
-      mockedApi.post.mockRejectedValueOnce(new Error("Network error"));
-
-      const { useAuthStore } = await import("./auth");
-      const store = useAuthStore();
-      store.setUser(123, "user@example.com");
-
-      // Should not throw
-      await expect(store.logout()).resolves.toBeUndefined();
-      expect(store.isAuthenticated).toBe(false);
     });
   });
 });

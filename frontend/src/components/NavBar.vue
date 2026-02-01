@@ -23,6 +23,14 @@ function navigateTo(route: string) {
           class="text-xl md:text-2xl font-bold text-[var(--text-primary)] tracking-tight font-serif">WikiVoice</span>
       </button>
       <div class="flex gap-4 md:gap-6 items-center">
+        <button @click="navigateTo('architecture')"
+          class="text-[var(--text-secondary)] hover:text-[var(--primary)] font-normal transition-colors uppercase text-sm tracking-wider hidden md:block">
+          Architecture
+        </button>
+        <button @click="navigateTo('roadmap')"
+          class="text-[var(--text-secondary)] hover:text-[var(--primary)] font-normal transition-colors uppercase text-sm tracking-wider hidden md:block">
+          Roadmap
+        </button>
         <template v-if="authStore.isAuthenticated">
           <button @click="navigateTo('chat')"
             class="text-[var(--text-primary)] hover:text-[var(--primary)] font-medium transition-colors uppercase text-sm tracking-wider hidden md:block">

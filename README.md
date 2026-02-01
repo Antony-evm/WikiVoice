@@ -75,21 +75,12 @@ npm run dev
 
 ## 🔧 Development
 
-| Command | Description |
-|---------|-------------|
-| `cd backend && poetry run pytest` | Run backend tests |
-| `cd frontend && npm test` | Run frontend tests |
-| `cd backend && poetry run ruff check .` | Lint backend code |
-| `cd frontend && npm run lint` | Lint frontend code |
-
-## 🔐 Environment Variables
-
-See `.env.example` in each project directory. **Never commit `.env` files!**
-
-Key variables:
-- `DATABASE_URL` - PostgreSQL connection string
-- `OPENAI_API_KEY` - OpenAI API key for RAG
-- `STYTCH_*` - Authentication configuration
+| Command                                 | Description        |
+| --------------------------------------- | ------------------ |
+| `cd backend && poetry run pytest`       | Run backend tests  |
+| `cd frontend && npm test`               | Run frontend tests |
+| `cd backend && poetry run ruff check .` | Lint backend code  |
+| `cd frontend && npm run lint`           | Lint frontend code |
 
 ## 🚢 Deployment
 

@@ -11,9 +11,6 @@ class ResponseHeadersMiddleware(BaseHTTPMiddleware):
         """Process request through response headers middleware."""
         response = await call_next(request)
 
-        # Prevent CloudFront from caching authenticated/user-specific responses.
-        # CloudFront's cache policy does not include cookies in the cache key,
-        # so without this header, User A's session data could be served to User B.
         if hasattr(request.state, "user_id"):
             response.headers["Cache-Control"] = "no-store, private"
 

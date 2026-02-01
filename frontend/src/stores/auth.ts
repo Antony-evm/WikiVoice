@@ -22,11 +22,9 @@ export const useAuthStore = defineStore("auth", () => {
   );
   const email = ref<string | null>(localStorage.getItem("email"));
 
-  // Computed - check stytch_user_id cookie for auth status
   const isAuthenticated = computed(() => {
-    // Check for stytch_user_id cookie (set by backend, readable by frontend)
     const stytchUserId = getCookie("stytch_user_id");
-    return !!stytchUserId && !!userId.value;
+    return !!userId.value || !!stytchUserId;
   });
 
   // Actions
@@ -43,7 +41,8 @@ export const useAuthStore = defineStore("auth", () => {
     localStorage.removeItem("userId");
     localStorage.removeItem("email");
     // Clear auth cookies by setting them to expire
-    document.cookie = "stytch_user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie =
+      "stytch_user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     router.push({ name: "auth" });
   }
 

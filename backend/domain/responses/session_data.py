@@ -22,20 +22,24 @@ class SessionData(BaseModel):
         }
 
     def set_cookies(self, response: Response) -> None:
-        """Set HTTP-only cookies for auth tokens."""
+        """Set HTTP-only cookies for auth tokens.
+
+        Now that frontend and API are behind the same CloudFront distribution,
+        cookies are same-origin (first-party) and work reliably on iOS/Safari.
+        """
         settings = get_settings()
         is_production = settings.environment == "production"
 
-        # For cross-origin requests (different CloudFront distributions),
-        # we need samesite="none" with secure=True
-        samesite_value = "none" if is_production else "lax"
+        # Same-origin now - use "lax" for security, no need for "none"
+        # This avoids ITP (Intelligent Tracking Prevention) issues on Safari/iOS
+        samesite_value = "lax"
 
         # Session JWT cookie - used for API authentication
         response.set_cookie(
             key="session_jwt",
             value=self.session_jwt,
             httponly=True,
-            secure=is_production,
+            secure=is_production,  # HTTPS in prod, HTTP in dev
             samesite=samesite_value,
             max_age=60 * 60 * 24 * 7,  # 7 days
             path="/",

@@ -9,8 +9,21 @@ variable "environment" {
 }
 
 variable "api_url" {
-  description = "Backend API URL for frontend configuration"
+  description = "Backend API URL for frontend configuration (deprecated - now same-origin)"
   type        = string
+  default     = ""
+}
+
+variable "alb_dns_name" {
+  description = "DNS name of the ALB for API routing. If provided, /api/* requests will be routed to this ALB."
+  type        = string
+  default     = ""
+}
+
+variable "alb_https_enabled" {
+  description = "Whether the ALB has HTTPS enabled"
+  type        = bool
+  default     = false
 }
 
 variable "waf_web_acl_arn" {

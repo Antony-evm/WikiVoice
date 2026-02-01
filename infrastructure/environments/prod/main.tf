@@ -233,51 +233,23 @@ module "waf" {
   tags = local.common_tags
 }
 
-# CloudFront Module
-module "cloudfront" {
-  source = "../../modules/cloudfront"
-  providers = {
-    aws = aws.us_east_1
-  }
-
-  project_name    = var.project_name
-  environment     = var.environment
-  alb_dns_name    = module.ecs.alb_dns_name
-  enable_https    = var.enable_https
-  custom_domain   = var.custom_domain
-  price_class     = var.cloudfront_price_class
-  waf_web_acl_arn = module.waf.web_acl_arn
-
-  default_ttl = var.cloudfront_default_ttl
-  max_ttl     = var.cloudfront_max_ttl
-  min_ttl     = var.cloudfront_min_ttl
-
-  cache_behaviors = var.cloudfront_cache_behaviors
-
-  # CORS: Allow frontend origins (set via variable to break circular dependency)
-  cors_allowed_origins = var.cors_allowed_origins
-
-  tags = local.common_tags
-
-  depends_on = [module.ecs, module.waf]
-}
-
 # ============================================
-# Frontend Static Hosting
+# Frontend Static Hosting + API Routing
+# Single CloudFront distribution serving both frontend and API
+# This eliminates third-party cookie issues on iOS/Safari
 # ============================================
 module "frontend" {
   source = "../../modules/frontend"
 
-  project_name = var.project_name
-  environment  = var.environment
-  api_url      = module.cloudfront.distribution_domain_name
-
-  # Optional: attach WAF to frontend CloudFront
-  # waf_web_acl_arn = module.waf.web_acl_arn
+  project_name      = var.project_name
+  environment       = var.environment
+  alb_dns_name      = module.ecs.alb_dns_name
+  alb_https_enabled = var.enable_https
+  waf_web_acl_arn   = module.waf.web_acl_arn
 
   tags = local.common_tags
 
-  depends_on = [module.cloudfront]
+  depends_on = [module.ecs, module.waf]
 }
 
 # CI/CD Module (optional - comment out if not using GitHub Actions)

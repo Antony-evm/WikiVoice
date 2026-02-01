@@ -79,20 +79,20 @@ describe("Auth Store", () => {
       expect(store.isAuthenticated).toBe(true);
     });
 
-    it("should not be authenticated when only cookie is present", async () => {
+    it("should be authenticated when only cookie is present", async () => {
       setCookie("stytch_user_id", "user-123");
       vi.resetModules();
       const { useAuthStore } = await import("./auth");
       const store = useAuthStore();
-      expect(store.isAuthenticated).toBe(false);
+      expect(store.isAuthenticated).toBe(true);
     });
 
-    it("should not be authenticated when only userId is present", async () => {
+    it("should be authenticated when only userId is present", async () => {
       localStorage.setItem("userId", "42");
       vi.resetModules();
       const { useAuthStore } = await import("./auth");
       const store = useAuthStore();
-      expect(store.isAuthenticated).toBe(false);
+      expect(store.isAuthenticated).toBe(true);
     });
   });
 
